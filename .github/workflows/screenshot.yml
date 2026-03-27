@@ -21,23 +21,11 @@ on:
 jobs:
   screenshot:
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/puppeteer/puppeteer:21.6.1
+      options: --user root
     
     steps:
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-      
-      - name: Cache Puppeteer
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/puppeteer
-          key: ${{ runner.os }}-puppeteer-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-puppeteer-
-          
-      - name: Install Puppeteer
-        run: npm install puppeteer
         
       - name: Capture Screenshot
         run: |
