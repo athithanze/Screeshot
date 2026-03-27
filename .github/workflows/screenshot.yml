@@ -1,0 +1,64 @@
+name: Website Screenshot
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'Website URL to capture'
+        required: true
+      width:
+        description: 'Viewport width'
+        required: false
+        default: '1920'
+      height:
+        description: 'Viewport height'
+        required: false
+        default: '1080'
+      request_id:
+        description: 'Request ID'
+        required: true
+
+jobs:
+  screenshot:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          
+      - name: Install Puppeteer
+        run: npm install puppeteer
+        
+      - name: Capture Screenshot
+        run: |
+          node -e "
+          const puppeteer = require('puppeteer');
+          const fs = require('fs');
+          
+          (async () => {
+            const browser = await puppeteer.launch({
+              args: ['--no-sandbox', '--disable-setuid-sandbox']
+            });
+            const page = await browser.newPage();
+            await page.setViewport({ 
+              width: ${{ inputs.width }}, 
+              height: ${{ inputs.height }} 
+            });
+            await page.goto('${{ inputs.url }}', { waitUntil: 'networkidle2' });
+            await page.waitForTimeout(2000);
+            const screenshot = await page.screenshot({ encoding: 'base64' });
+            await browser.close();
+            fs.mkdirSync('output', { recursive: true });
+            fs.writeFileSync('output/screenshot.txt', screenshot);
+            console.log('Screenshot captured');
+          })();
+          "
+          
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-${{ inputs.request_id }}
+          path: output/screenshot.txt
+          retention-days: 1
