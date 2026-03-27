@@ -33,28 +33,55 @@ jobs:
         
       - name: Capture Screenshot
         run: |
-          node -e "
+          cat > capture.js << 'EOF'
           const puppeteer = require('puppeteer');
           const fs = require('fs');
           
           (async () => {
-            const browser = await puppeteer.launch({
-              args: ['--no-sandbox', '--disable-setuid-sandbox']
-            });
-            const page = await browser.newPage();
-            await page.setViewport({ 
-              width: ${{ inputs.width }}, 
-              height: ${{ inputs.height }} 
-            });
-            await page.goto('${{ inputs.url }}', { waitUntil: 'networkidle2' });
-            await page.waitForTimeout(2000);
-            const screenshot = await page.screenshot({ encoding: 'base64' });
-            await browser.close();
-            fs.mkdirSync('output', { recursive: true });
-            fs.writeFileSync('output/screenshot.txt', screenshot);
-            console.log('Screenshot captured');
+            try {
+              console.log('Launching browser...');
+              const browser = await puppeteer.launch({
+                headless: true,
+                args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+              });
+              
+              console.log('Creating new page...');
+              const page = await browser.newPage();
+              
+              console.log('Setting viewport...');
+              await page.setViewport({ 
+                width: parseInt(process.env.WIDTH), 
+                height: parseInt(process.env.HEIGHT)
+              });
+              
+              console.log('Navigating to URL:', process.env.URL);
+              await page.goto(process.env.URL, { 
+                waitUntil: 'networkidle2',
+                timeout: 30000
+              });
+              
+              console.log('Waiting for page to settle...');
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              
+              console.log('Taking screenshot...');
+              const screenshot = await page.screenshot({ encoding: 'base64' });
+              
+              await browser.close();
+              
+              console.log('Saving screenshot...');
+              fs.mkdirSync('output', { recursive: true });
+              fs.writeFileSync('output/screenshot.txt', screenshot);
+              
+              console.log('Screenshot captured successfully!');
+              process.exit(0);
+            } catch (error) {
+              console.error('Error capturing screenshot:', error);
+              process.exit(1);
+            }
           })();
-          "
+          EOF
+          
+          URL="${{ inputs.url }}" WIDTH="${{ inputs.width }}" HEIGHT="${{ inputs.height }}" node capture.js
           
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
