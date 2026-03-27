@@ -26,6 +26,8 @@ jobs:
       options: --user root
     
     steps:
+      - name: Install Puppeteer npm package
+        run: npm install puppeteer
         
       - name: Capture Screenshot
         run: |
